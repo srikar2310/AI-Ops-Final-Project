@@ -4,4 +4,4 @@ eval:
   cache_plies: 16                    # cache only the first N plies (0 = bit-exact reruns)
   mate_score: 10000                  # centipawn value used for forced mates
   engine_path: /usr/games/stockfish
-  stockfish_version: "auto"          # "auto" = record whatever the engine reports; or pin e.g. "Stockfish 15.1"
+  stockfish_version: "auto"          # "auto" = record whatever the engine reports; or pin e.g. "Stockfish 15.1"s
