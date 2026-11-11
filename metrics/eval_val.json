@@ -1,0 +1,13 @@
+{
+  "stockfish": "Stockfish 16",
+  "depth": 11,
+  "hash_mb": 64,
+  "cache_plies": 16,
+  "games": 20000,
+  "positions": 1449437,
+  "failed_games_last_run": 0,
+  "seconds": 2061.7,
+  "positions_per_sec": 703.0,
+  "games_per_sec": 9.701,
+  "git_commit": "76e34ebdae89a2c75a5f240f391628a1472241d8"
+}

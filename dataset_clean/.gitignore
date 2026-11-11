@@ -1,3 +1,6 @@
 /train
 /val
 /test
+/train_evaluated
+/val_evaluated
+/test_evaluated

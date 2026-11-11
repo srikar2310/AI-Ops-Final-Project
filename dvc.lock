@@ -1,0 +1,107 @@
+schema: '2.0'
+stages:
+  evaluate@train:
+    cmd: python Stockfish_train_eval.py --input dataset_clean/train --output 
+      dataset_clean/train_evaluated --meta metrics/eval_train.json
+    deps:
+    - path: Stockfish_train_eval.py
+      hash: md5
+      md5: e6c39c100ae4c0533d7278e439742b1d
+      size: 10655
+    - path: dataset_clean/train
+      hash: md5
+      md5: 6e000f4db593dd5e8c57d6c79438b5a5.dir
+      size: 50021821
+      nfiles: 11
+    - path: requirements.txt
+      hash: md5
+      md5: c5497bf5012c6f80c20aaa2a59812197
+      size: 680
+    params:
+      params.yaml:
+        eval.cache_plies: 16
+        eval.depth: 11
+        eval.engine_path: /usr/games/stockfish
+        eval.hash_mb: 64
+        eval.mate_score: 10000
+        eval.stockfish_version: auto
+    outs:
+    - path: dataset_clean/train_evaluated
+      hash: md5
+      md5: de9115ec82f6c6239a768151623e40de.dir
+      size: 79288196
+      nfiles: 10
+    - path: metrics/eval_train.json
+      hash: md5
+      md5: 024ec90d1e73e6f8e27935a09194732c
+      size: 297
+  evaluate@val:
+    cmd: python Stockfish_train_eval.py --input dataset_clean/val --output 
+      dataset_clean/val_evaluated --meta metrics/eval_val.json
+    deps:
+    - path: Stockfish_train_eval.py
+      hash: md5
+      md5: e6c39c100ae4c0533d7278e439742b1d
+      size: 10655
+    - path: dataset_clean/val
+      hash: md5
+      md5: 44e13b06a2371aaffeb3be2726cd7589.dir
+      size: 10003966
+      nfiles: 5
+    - path: requirements.txt
+      hash: md5
+      md5: c5497bf5012c6f80c20aaa2a59812197
+      size: 680
+    params:
+      params.yaml:
+        eval.cache_plies: 16
+        eval.depth: 11
+        eval.engine_path: /usr/games/stockfish
+        eval.hash_mb: 64
+        eval.mate_score: 10000
+        eval.stockfish_version: auto
+    outs:
+    - path: dataset_clean/val_evaluated
+      hash: md5
+      md5: c4235aca3fb61777b1f5a5eab2be0d1e.dir
+      size: 15850088
+      nfiles: 4
+    - path: metrics/eval_val.json
+      hash: md5
+      md5: c3047f5d7374ae4ed2b3fa3b36191f8f
+      size: 295
+  evaluate@test:
+    cmd: python Stockfish_train_eval.py --input dataset_clean/test --output 
+      dataset_clean/test_evaluated --meta metrics/eval_test.json
+    deps:
+    - path: Stockfish_train_eval.py
+      hash: md5
+      md5: e6c39c100ae4c0533d7278e439742b1d
+      size: 10655
+    - path: dataset_clean/test
+      hash: md5
+      md5: 75a53f479ee4bc976f9730717c8cdd25.dir
+      size: 9991921
+      nfiles: 5
+    - path: requirements.txt
+      hash: md5
+      md5: c5497bf5012c6f80c20aaa2a59812197
+      size: 680
+    params:
+      params.yaml:
+        eval.cache_plies: 16
+        eval.depth: 11
+        eval.engine_path: /usr/games/stockfish
+        eval.hash_mb: 64
+        eval.mate_score: 10000
+        eval.stockfish_version: auto
+    outs:
+    - path: dataset_clean/test_evaluated
+      hash: md5
+      md5: 366505bd05dc553ce2e9f27a57534deb.dir
+      size: 15838607
+      nfiles: 4
+    - path: metrics/eval_test.json
+      hash: md5
+      md5: 7d02dcc5ff70896cdf0086c9fb8a1069
+      size: 296
