@@ -1,0 +1,30 @@
+stages:
+  evaluate:
+    foreach:
+      - train
+      - val
+      - test
+    do:
+      cmd: >-
+        python Stockfish_train_eval.py
+        --input dataset_clean/${item}
+        --output dataset_clean/${item}_evaluated
+        --meta metrics/eval_${item}.json
+      deps:
+        - Stockfish_train_eval.py
+        - requirements.txt
+        - dataset_clean/${item}
+      params:
+        - eval.depth
+        - eval.hash_mb
+        - eval.cache_plies
+        - eval.mate_score
+        - eval.engine_path
+        - eval.stockfish_version
+      outs:
+        # persist: true keeps existing output so the script can resume after a crash
+        - dataset_clean/${item}_evaluated:
+            persist: true
+      metrics:
+        - metrics/eval_${item}.json:
+            cache: false
