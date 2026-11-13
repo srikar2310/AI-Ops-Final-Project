@@ -105,3 +105,105 @@ stages:
       hash: md5
       md5: 7d02dcc5ff70896cdf0086c9fb8a1069
       size: 296
+  prepare:
+    cmd: python prepare.py
+    deps:
+    - path: dataset_clean/test_evaluated
+      hash: md5
+      md5: 366505bd05dc553ce2e9f27a57534deb.dir
+      size: 15838607
+      nfiles: 4
+    - path: dataset_clean/train_evaluated
+      hash: md5
+      md5: de9115ec82f6c6239a768151623e40de.dir
+      size: 79288196
+      nfiles: 10
+    - path: dataset_clean/val_evaluated
+      hash: md5
+      md5: c4235aca3fb61777b1f5a5eab2be0d1e.dir
+      size: 15850088
+      nfiles: 4
+    - path: features.py
+      hash: md5
+      md5: 3ab41137e353e7bc712d596283db1025
+      size: 4605
+    - path: prepare.py
+      hash: md5
+      md5: 4f798e6d71cc6af28cf1aeb3ffb723e2
+      size: 8199
+    params:
+      params.yaml:
+        data.cp_clip: 1500
+        data.max_plies: 200
+        data.min_plies: 10
+    outs:
+    - path: data/processed
+      hash: md5
+      md5: 31f99138244c11298655a083682fd185.dir
+      size: 256205733
+      nfiles: 4
+    - path: metrics/prepare.json
+      hash: md5
+      md5: d9fbc01020c7a08c848c9cbd1bd8d8e0
+      size: 1148
+  train:
+    cmd: python train.py
+    deps:
+    - path: data/processed
+      hash: md5
+      md5: 31f99138244c11298655a083682fd185.dir
+      size: 256205733
+      nfiles: 4
+    - path: features.py
+      hash: md5
+      md5: 3ab41137e353e7bc712d596283db1025
+      size: 4605
+    - path: model.py
+      hash: md5
+      md5: 7264b518ef7ec556fd355d0af09a76b3
+      size: 6675
+    - path: pyfunc_model.py
+      hash: md5
+      md5: 4bb37ff61ea531df3ff2d2e15b56b277
+      size: 2563
+    - path: train.py
+      hash: md5
+      md5: 4db6cbaf2115654da2ab7b43d181a674
+      size: 11664
+    params:
+      params.yaml:
+        train.batch_size: 256
+        train.channels:
+        - 32
+        - 64
+        - 64
+        - 128
+        train.dilations:
+        - 1
+        - 2
+        - 4
+        - 8
+        train.dropout: 0.2
+        train.epochs: 40
+        train.exclude_features: []
+        train.feat_hidden: 64
+        train.hidden: 64
+        train.kernel: 5
+        train.lr: 0.001
+        train.patience: 6
+        train.seed: 42
+        train.use_features: true
+        train.weight_decay: 0.0001
+    outs:
+    - path: metrics/train.json
+      hash: md5
+      md5: e0d68a921cf1e935802bf5ebea3d4050
+      size: 326
+    - path: models/best.pt
+      hash: md5
+      md5: 79e9f1f30feab625246a74852dd5e06f
+      size: 397043
+    - path: models/config.json
+      hash: md5
+      md5: b942fa450fe220bc31561e12fb2239f1
+      size: 1166

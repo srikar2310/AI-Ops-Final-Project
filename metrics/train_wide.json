@@ -1,0 +1,11 @@
+{
+  "run_id": "7f93db75c3b2479a9213501bee582f5b",
+  "best_epoch": 13,
+  "val_mae": 187.29856872558594,
+  "test_mae": 184.5170135498047,
+  "test_rmse": 232.08743286132812,
+  "test_within_100": 0.3348499834537506,
+  "test_within_200": 0.616849958896637,
+  "baseline_test_mae": 232.63409423828125,
+  "model_parameters": 322625
+}
