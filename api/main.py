@@ -5,6 +5,10 @@ Run (from the project folder, so params.yaml is found):
 
 Endpoints
     POST /predict   analyse one game and estimate the player ratings
+    POST /validate  check a PGN without running Stockfish (instant feedback)
+    POST /games/split  list the games in an uploaded PGN file
+    GET  /config    limits the UI needs (min/max length, file size, depth)
+    GET  /ops/*     read-only data for the pipeline console (see ops.py)
     GET  /health    liveness: the process is up
     GET  /ready     readiness: Stockfish and the model service are usable
     GET  /metrics   Prometheus metrics
@@ -22,20 +26,24 @@ from fastapi.responses import JSONResponse, Response
 from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
-from . import metrics
+from . import metrics, ops
 from .engine import EnginePool
-from .errors import APIError
+from .errors import APIError, BadPGNError
+from .labels import annotate_moves, summarise
 from .logging_setup import request_id_var, setup_logging
 from .model_client import build_model_client
-from .pgn_utils import parse_pgn
-from .schemas import (AnalysisInfo, GameInfo, ModelInfo, PlayerPrediction,
-                      PredictRequest, PredictResponse)
+from .pgn_utils import parse_pgn, split_games
+from .schemas import (AnalysisInfo, ConfigResponse, ErrorInfo, GameInfo,
+                      GameListItem, ModelInfo, MoveInfo, PlayerPrediction,
+                      PredictRequest, PredictResponse, SplitRequest,
+                      SplitResponse, ValidateRequest, ValidateResponse)
 from .settings import Settings
 
 log = logging.getLogger("api")
 
 QUIET_PATHS = {"/metrics", "/health", "/ready"}  # probes: don't flood the log
 SHORT_GAME_PLIES = 20
+API_VERSION = "1.1.0"
 
 
 def _endpoint(request):
@@ -47,6 +55,19 @@ def _endpoint(request):
 def _error_body(code, message):
     return {"error": {"code": code, "message": message},
             "request_id": request_id_var.get()}
+
+
+def _game_warnings(game):
+    """Plain-language warnings shared by /validate and /predict."""
+    warnings = []
+    if game.result == "*":
+        warnings.append("The game result is unknown, so the estimate is less reliable. "
+                        "Add a [Result] tag if the game is finished.")
+    elif game.result_inferred:
+        warnings.append(f"The result ({game.result}) was inferred from the final position.")
+    if game.plies < SHORT_GAME_PLIES:
+        warnings.append("This is a very short game, so the estimate is less reliable.")
+    return warnings
 
 
 def create_app(settings=None, engine_pool=None, model_client=None):
@@ -74,12 +95,13 @@ def create_app(settings=None, engine_pool=None, model_client=None):
         title="Chess rating estimator",
         description="Upload a PGN. Stockfish evaluates the game and a trained model "
                     "estimates each player's rating.",
-        version="1.0.0",
+        version=API_VERSION,
         lifespan=lifespan,
     )
     app.state.settings = settings
     app.state.pool = engine_pool
     app.state.model = model_client
+    app.include_router(ops.router)
 
     # ------------------------------------------------------------ middleware
     @app.middleware("http")
@@ -172,14 +194,8 @@ def create_app(settings=None, engine_pool=None, model_client=None):
                 predicted_rating=round(rating, 1),
                 actual_rating=game.white_elo if side == "white" else game.black_elo))
 
-        warnings = []
-        if game.result == "*":
-            warnings.append("The game result is unknown, so the estimate is less reliable. "
-                            "Add a [Result] tag if the game is finished.")
-        elif game.result_inferred:
-            warnings.append(f"The result ({game.result}) was inferred from the final position.")
-        if game.plies < SHORT_GAME_PLIES:
-            warnings.append("This is a very short game, so the estimate is less reliable.")
+        warnings = _game_warnings(game)
+        moves = annotate_moves(analysis.evals, game.moves_san, settings.cp_clip)
 
         log.info("Predicted %s in %.2fs (Stockfish %.2fs, model %.2fs)",
                  {p.side: p.predicted_rating for p in players},
@@ -195,7 +211,47 @@ def create_app(settings=None, engine_pool=None, model_client=None):
                 positions_searched=analysis.positions,
                 seconds=round(analysis.seconds, 2), evals_white_cp=analysis.evals),
             model=ModelInfo(seconds=round(model_seconds, 3), **app.state.model.describe()),
+            moves=[MoveInfo(**mv) for mv in moves],
+            move_summary=summarise(moves),
             warnings=warnings)
+
+    @app.post("/validate", response_model=ValidateResponse, tags=["input"])
+    def validate(req: ValidateRequest):
+        """Check a PGN without running Stockfish. A bad game is a normal answer
+        (valid=false + a message), not an HTTP error, so the UI can show it live."""
+        try:
+            game = parse_pgn(req.pgn, max_bytes=settings.max_pgn_bytes,
+                             min_plies=settings.min_plies, max_plies=settings.max_plies)
+        except BadPGNError as exc:
+            return ValidateResponse(valid=False,
+                                    error=ErrorInfo(code=exc.code, message=exc.message))
+        return ValidateResponse(
+            valid=True, plies=game.plies, result=game.result,
+            result_known=game.result != "*", result_inferred=game.result_inferred,
+            white=game.white, black=game.black,
+            white_elo=game.white_elo, black_elo=game.black_elo,
+            warnings=_game_warnings(game))
+
+    @app.post("/games/split", response_model=SplitResponse, tags=["input"])
+    def games_split(req: SplitRequest):
+        """List the games in an uploaded file; each item carries its own PGN."""
+        items, truncated = split_games(
+            req.text, max_bytes=settings.max_upload_bytes,
+            max_games=settings.max_games_per_file, game_max_bytes=settings.max_pgn_bytes,
+            min_plies=settings.min_plies, max_plies=settings.max_plies)
+        return SplitResponse(games=[GameListItem(**it) for it in items],
+                             truncated=truncated, limit=settings.max_games_per_file)
+
+    @app.get("/config", response_model=ConfigResponse, tags=["input"])
+    def get_config():
+        """Limits the UI shows and checks against (so it hard-codes none of them)."""
+        return ConfigResponse(
+            api_version=API_VERSION, min_plies=settings.min_plies,
+            max_plies=settings.max_plies, max_pgn_bytes=settings.max_pgn_bytes,
+            max_upload_bytes=settings.max_upload_bytes,
+            max_games_per_file=settings.max_games_per_file,
+            short_game_plies=SHORT_GAME_PLIES, engine_depth=settings.depth,
+            analysis_timeout_s=settings.analysis_timeout_s)
 
     @app.get("/health", tags=["operations"])
     def health():

@@ -1,0 +1,194 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<style>
+  :root { --text:#222; --panel:#f0f2f6; --light:#f0d9b5; --dark:#b58863; }
+  * { box-sizing: border-box; }
+  body { margin:0; padding:4px; font-family:"Source Sans Pro",sans-serif; color:var(--text); background:transparent; }
+  .wrap { display:flex; flex-wrap:wrap; gap:18px; align-items:flex-start; }
+  .boardcol { display:flex; gap:6px; width:min(100%,430px); flex:0 0 auto; }
+  .bar { width:22px; display:flex; flex-direction:column; border:1px solid #666; border-radius:4px; overflow:hidden; }
+  .bar.flip { flex-direction:column-reverse; }
+  #barB { background:#262626; flex:1 1 0; transition:flex-grow .2s; }
+  #barW { background:#fff; flex:1 1 0; transition:flex-grow .2s; }
+  #board { flex:1; aspect-ratio:1; display:grid; grid-template-columns:repeat(8,minmax(0,1fr)); grid-template-rows:repeat(8,minmax(0,1fr)); border:1px solid #666; user-select:none; }
+  .sq { position:relative; aspect-ratio:1; min-width:0; min-height:0; overflow:hidden; } .sq.light { background:var(--light); } .sq.dark { background:var(--dark); }
+  .sq svg { position:absolute; inset:0; width:100%; height:100%; display:block; }
+  .sq.last::before { content:""; position:absolute; inset:0; background:rgba(255,235,59,.5); }
+  .co { position:absolute; font-size:10px; font-weight:700; opacity:.7; }
+  .co.f { right:2px; bottom:0; } .co.r { left:2px; top:0; }
+  .info { flex:1; min-width:250px; }
+  .move { font-size:20px; font-weight:700; min-height:28px; }
+  .quality { min-height:22px; font-size:15px; margin-bottom:6px; }
+  .card { border-radius:10px; padding:12px 16px; margin:6px 0 12px; border:1px solid #9995; transition:background .2s,color .2s; }
+  .card .lead { font-size:14px; text-transform:uppercase; letter-spacing:.06em; opacity:.8; }
+  .card .pct { font-size:38px; font-weight:800; line-height:1.15; }
+  .card .ev { font-size:16px; }
+  .ctrl { display:flex; gap:6px; margin-bottom:8px; }
+  .ctrl button { flex:1; padding:6px 0; font-size:16px; border:1px solid #8886; border-radius:6px;
+                 background:var(--panel); color:var(--text); cursor:pointer; }
+  .ctrl button:hover { border-color:#ff4b4b; }
+  input[type=range] { width:100%; }
+  .hint { font-size:13px; opacity:.7; margin:4px 0 10px; }
+  #graph svg { width:100%; display:block; cursor:pointer; border-radius:6px; background:var(--panel); }
+</style></head>
+<body>
+<div class="wrap">
+  <div class="boardcol">
+    <div class="bar" id="bar"><div id="barB"></div><div id="barW"></div></div>
+    <div id="board"></div>
+  </div>
+  <div class="info">
+    <div class="move" id="move"></div>
+    <div class="quality" id="quality"></div>
+    <div class="card" id="card"><div class="lead" id="lead"></div><div class="pct" id="pct"></div><div class="ev" id="ev"></div></div>
+    <div class="ctrl">
+      <button id="bStart" title="Start (Home)">⏮</button><button id="bPrev" title="Back (←)">◀</button>
+      <button id="bNext" title="Forward (→)">▶</button><button id="bEnd" title="End (End)">⏭</button>
+      <button id="bFlip" title="Flip board">⇅ Flip</button>
+    </div>
+    <input type="range" id="slider" min="0" value="0">
+    <div class="hint">Tip: use the ← → arrow keys to step through the game (Home / End to jump).</div>
+    <div id="graph"></div>
+  </div>
+</div>
+<script>
+const MATE = 9000;   // |eval| >= this is a forced mate (the pipeline stores mates as +/-10000)
+const EQUAL_EPS = 0.005;
+function send(type, data) {
+  window.parent.postMessage(Object.assign({isStreamlitMessage: true, type: type}, data || {}), "*");
+}
+let A = null, cur = 0, flipped = false, sig = null, lastH = 0;
+const $ = id => document.getElementById(id);
+const pct = x => Math.round(x * 100) + "%";
+
+function parseFen(placement) {
+  const grid = [];
+  placement.split("/").forEach((row, i) => {
+    const r = [];
+    for (const ch of row) { if (/\d/.test(ch)) for (let k = 0; k < +ch; k++) r.push(""); else r.push(ch); }
+    grid[7 - i] = r;
+  });
+  return grid;
+}
+function fmtEval(cp, final) {
+  if (Math.abs(cp) >= MATE) return final ? "Checkmate" : "Forced mate";
+  return (cp > 0 ? "+" : "") + (cp / 100).toFixed(2);
+}
+
+function draw() {
+  if (!A) return;
+  const n = A.frames.length - 1, f = A.frames[cur];
+  // ---- board
+  const grid = parseFen(f.fen), board = $("board");
+  board.innerHTML = "";
+  const last = f.uci ? [f.uci.slice(0, 2), f.uci.slice(2, 4)] : [];
+  for (let i = 0; i < 8; i++) for (let j = 0; j < 8; j++) {
+    const rank = flipped ? i : 7 - i, file = flipped ? 7 - j : j;
+    const name = "abcdefgh"[file] + (rank + 1), piece = grid[rank][file];
+    const d = document.createElement("div");
+    d.className = "sq " + ((rank + file) % 2 === 0 ? "dark" : "light") + (last.includes(name) ? " last" : "");
+    if (piece) d.innerHTML = A.pieces[piece];
+    if (i === 7) d.insertAdjacentHTML("beforeend", `<span class="co f">${"abcdefgh"[file]}</span>`);
+    if (j === 0) d.insertAdjacentHTML("beforeend", `<span class="co r">${rank + 1}</span>`);
+    board.appendChild(d);
+  }
+  // ---- eval bar (white part = White's winning chance)
+  $("bar").classList.toggle("flip", flipped);
+  $("barW").style.flexGrow = f.wp; $("barB").style.flexGrow = 1 - f.wp;
+  // ---- move text
+  $("move").textContent = cur === 0 ? "Starting position"
+      : `Move ${Math.ceil(f.ply / 2)}${f.side === "white" ? "." : "..."} ${f.san}`;
+  const q = $("quality");
+  if (f.label !== "ok") {
+    const colour = {inaccuracy: "#4c78a8", mistake: "#f58518", blunder: "#e45756"}[f.label];
+    q.innerHTML = `<span style="color:${colour};font-weight:700">${f.label.toUpperCase()}</span> – gave away ${pct(f.loss)} winning chance`;
+  } else q.textContent = "";
+  // ---- win probability / eval card: always from the point of view of whoever is ahead
+  const card = $("card");
+  const lead = f.wp > 0.5 + EQUAL_EPS ? "w" : f.wp < 0.5 - EQUAL_EPS ? "b" : "e";
+  const leaderWp = lead === "b" ? 1 - f.wp : f.wp;
+  const leaderCp = lead === "b" ? -f.eval_cp : f.eval_cp;
+  const styles = {w: ["#ffffff", "#111111"], b: ["#262626", "#ffffff"], e: ["var(--panel)", "var(--text)"]}[lead];
+  card.style.background = styles[0]; card.style.color = styles[1];
+  $("lead").textContent = lead === "w" ? "White is winning" : lead === "b" ? "Black is winning" : "Equal position";
+  $("pct").textContent = pct(leaderWp);
+  $("ev").textContent = "Eval " + fmtEval(leaderCp, cur === n && cur > 0) +
+      (lead === "e" ? "" : "  ·  win chance for " + (lead === "w" ? "White" : "Black"));
+  // ---- controls + graph
+  $("slider").max = n; $("slider").value = cur;
+  drawGraph();
+  fitFrame();
+}
+
+function drawGraph() {
+  const n = A.frames.length - 1, host = $("graph");
+  const W = Math.max(host.clientWidth, 200), H = 100, pad = 4;
+  const x = i => pad + (n ? i / n : 0) * (W - 2 * pad), y = wp => pad + (1 - wp) * (H - 2 * pad);
+  let s = `<svg viewBox="0 0 ${W} ${H}" height="${H}">`;
+  s += `<line x1="0" x2="${W}" y1="${y(.5)}" y2="${y(.5)}" stroke="#8888" stroke-dasharray="4 4"/>`;
+  s += `<text x="6" y="12" font-size="10" fill="#888">White ahead</text>`;
+  s += `<text x="6" y="${H - 5}" font-size="10" fill="#888">Black ahead</text>`;
+  s += `<polyline fill="none" stroke="#4c78a8" stroke-width="2" points="${A.frames.map((f, i) => x(i) + "," + y(f.wp)).join(" ")}"/>`;
+  const col = {inaccuracy: "#4c78a8", mistake: "#f58518", blunder: "#e45756"};
+  A.frames.forEach((f, i) => { if (col[f.label]) s += `<circle cx="${x(i)}" cy="${y(f.wp)}" r="3.5" fill="${col[f.label]}"/>`; });
+  s += `<line x1="${x(cur)}" x2="${x(cur)}" y1="0" y2="${H}" stroke="#ff4b4b" stroke-width="2"/></svg>`;
+  host.innerHTML = s;
+  host.firstChild.onclick = e => {
+    const r = e.currentTarget.getBoundingClientRect();
+    go(Math.round(((e.clientX - r.left) / r.width * W - pad) / (W - 2 * pad) * n));
+  };
+}
+
+function go(i) { if (!A) return; cur = Math.max(0, Math.min(A.frames.length - 1, i)); draw(); }
+
+// ---- keyboard: works inside this frame AND anywhere on the Streamlit page
+function handleKey(e, fromParent) {
+  if (e.altKey || e.ctrlKey || e.metaKey || e.shiftKey) return;
+  if (fromParent) {
+    const t = e.target;
+    if (t && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName))) return;  // let people type
+  }
+  const k = e.key;
+  if (k === "ArrowLeft") go(cur - 1);
+  else if (k === "ArrowRight") go(cur + 1);
+  else if (k === "Home") go(0);
+  else if (k === "End") go(A.frames.length - 1);
+  else return;
+  e.preventDefault();
+}
+window.addEventListener("keydown", e => handleKey(e, false));
+try {   // components are same-origin with the app, so we can listen on the parent page too
+  const pw = window.parent, KEY = "__chessReplayKeyHandler";
+  if (pw[KEY]) pw.document.removeEventListener("keydown", pw[KEY]);   // drop the previous mount's handler
+  const h = e => {
+    try { if (!window.frameElement || !window.frameElement.isConnected) throw 0; }
+    catch (_) { pw.document.removeEventListener("keydown", h); return; }   // iframe is gone
+    handleKey(e, true);
+  };
+  pw[KEY] = h; pw.document.addEventListener("keydown", h);
+} catch (_) { /* cross-origin embed: arrow keys work only while this frame has focus */ }
+
+$("bStart").onclick = () => go(0);   $("bPrev").onclick = () => go(cur - 1);
+$("bNext").onclick = () => go(cur + 1); $("bEnd").onclick = () => go(1e9);
+$("bFlip").onclick = () => { flipped = !flipped; draw(); };
+$("slider").oninput = e => go(+e.target.value);
+
+function applyTheme(t) {
+  if (!t) return;
+  const s = document.documentElement.style;
+  if (t.textColor) s.setProperty("--text", t.textColor);
+  if (t.secondaryBackgroundColor) s.setProperty("--panel", t.secondaryBackgroundColor);
+}
+function fitFrame() {
+  const h = document.body.scrollHeight + 6;
+  if (Math.abs(h - lastH) > 1) { lastH = h; send("streamlit:setFrameHeight", {height: h}); }
+}
+window.addEventListener("message", ev => {
+  if (!ev.data || ev.data.type !== "streamlit:render") return;
+  A = ev.data.args; applyTheme(ev.data.theme);
+  if (A.sig !== sig) { sig = A.sig; cur = 0; }      // a new analysis starts at move 0
+  draw();
+});
+new ResizeObserver(() => { if (A) drawGraph(); fitFrame(); }).observe(document.body);
+send("streamlit:componentReady", {apiVersion: 1});
+</script></body></html>

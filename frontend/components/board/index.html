@@ -1,0 +1,125 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<style>
+  :root { --text:#222; --panel:#f0f2f6; --light:#f0d9b5; --dark:#b58863; }
+  * { box-sizing: border-box; }
+  body { margin:0; padding:2px; font-family:"Source Sans Pro",sans-serif; color:var(--text); background:transparent; }
+  #board { width:min(100%,440px); aspect-ratio:1; display:grid; grid-template-columns:repeat(8,minmax(0,1fr)); grid-template-rows:repeat(8,minmax(0,1fr));
+           border:1px solid #666; user-select:none; }
+  .sq { position:relative; cursor:pointer; aspect-ratio:1; min-width:0; min-height:0; overflow:hidden; }
+  .sq.light { background:var(--light); } .sq.dark { background:var(--dark); }
+  .sq svg { position:absolute; inset:0; width:100%; height:100%; display:block; pointer-events:none; }
+  .sq.last::before { content:""; position:absolute; inset:0; background:rgba(255,235,59,.45); }
+  .sq.sel::before  { content:""; position:absolute; inset:0; background:rgba(20,160,90,.55); }
+  .sq.check::before{ content:""; position:absolute; inset:0; background:radial-gradient(circle,rgba(230,30,30,.85),rgba(230,30,30,0) 75%); }
+  .sq.target::after { content:""; position:absolute; left:35%; top:35%; width:30%; height:30%;
+                      border-radius:50%; background:rgba(20,120,70,.55); pointer-events:none; }
+  .sq.target.cap::after { left:4%; top:4%; width:92%; height:92%; background:none; border:5px solid rgba(20,120,70,.55); }
+  .sq:hover { outline:2px solid rgba(20,120,70,.8); outline-offset:-2px; }
+  .co { position:absolute; font-size:10px; font-weight:700; pointer-events:none; opacity:.7; }
+  .co.f { right:2px; bottom:0; } .co.r { left:2px; top:0; }
+  #promo { display:none; margin-top:6px; align-items:center; gap:6px; }
+  #promo button { width:48px; height:48px; padding:2px; border:1px solid #888; border-radius:6px;
+                  background:var(--panel); cursor:pointer; }
+  #promo button svg { width:100%; height:100%; }
+</style></head>
+<body>
+<div id="board"></div>
+<div id="promo"><span>Promote to:</span></div>
+<script>
+// Minimal Streamlit component protocol (no build step, no npm).
+function send(type, data) {
+  window.parent.postMessage(Object.assign({isStreamlitMessage: true, type: type}, data || {}), "*");
+}
+let A = null, sel = null, promo = null, lastFen = null, lastH = 0;
+
+function parseFen(placement) {            // grid[rank 0..7][file 0..7] -> piece letter or ""
+  const grid = [];
+  placement.split("/").forEach((row, i) => {
+    const r = [];
+    for (const ch of row) { if (/\d/.test(ch)) for (let k = 0; k < +ch; k++) r.push(""); else r.push(ch); }
+    grid[7 - i] = r;
+  });
+  return grid;
+}
+const isWhite = p => p === p.toUpperCase();
+const legalFrom = sq => A.legal.filter(u => u.startsWith(sq)).map(u => u.slice(2, 4));
+
+function draw() {
+  const grid = parseFen(A.fen), board = document.getElementById("board");
+  board.innerHTML = "";
+  const targets = sel ? legalFrom(sel) : [];
+  const lastMove = A.last ? [A.last.slice(0, 2), A.last.slice(2, 4)] : [];
+  for (let i = 0; i < 8; i++) for (let j = 0; j < 8; j++) {
+    const rank = A.flipped ? i : 7 - i, file = A.flipped ? 7 - j : j;
+    const name = "abcdefgh"[file] + (rank + 1), piece = grid[rank][file];
+    const d = document.createElement("div");
+    d.className = "sq " + ((rank + file) % 2 === 0 ? "dark" : "light");
+    if (lastMove.includes(name)) d.classList.add("last");
+    if (name === A.check) d.classList.add("check");
+    if (name === sel) d.classList.add("sel");
+    if (targets.includes(name)) { d.classList.add("target"); if (piece) d.classList.add("cap"); }
+    if (piece) d.innerHTML = A.pieces[piece];
+    if (i === 7) d.insertAdjacentHTML("beforeend", `<span class="co f">${"abcdefgh"[file]}</span>`);
+    if (j === 0) d.insertAdjacentHTML("beforeend", `<span class="co r">${rank + 1}</span>`);
+    d.onclick = () => clickSq(name, piece);
+    board.appendChild(d);
+  }
+  const pr = document.getElementById("promo");
+  pr.style.display = promo ? "flex" : "none";
+  fitFrame();
+}
+
+function clickSq(name, piece) {
+  if (promo) return;
+  if (sel && legalFrom(sel).includes(name)) {
+    const cands = A.legal.filter(u => u.startsWith(sel + name));
+    if (cands.length > 1) { promo = {from: sel, to: name}; buildPromo(); draw(); return; }
+    return sendMove(cands[0]);
+  }
+  if (piece && (isWhite(piece) ? "w" : "b") === A.turn && name !== sel && legalFrom(name).length) sel = name;
+  else sel = null;
+  draw();
+}
+
+function buildPromo() {
+  const pr = document.getElementById("promo");
+  pr.innerHTML = "<span>Promote to:</span>";
+  for (const l of ["q", "r", "b", "n"]) {
+    const b = document.createElement("button");
+    b.innerHTML = A.pieces[A.turn === "w" ? l.toUpperCase() : l];
+    b.onclick = () => { const u = promo.from + promo.to + l; promo = null; sendMove(u); };
+    pr.appendChild(b);
+  }
+  const c = document.createElement("button");
+  c.textContent = "✕"; c.onclick = () => { promo = null; sel = null; draw(); };
+  pr.appendChild(c);
+}
+
+function sendMove(uci) {
+  sel = null; promo = null;
+  // the nonce lets Python ignore a value it has already processed
+  send("streamlit:setComponentValue",
+       {value: {uci: uci, nonce: Math.random().toString(36).slice(2)}, dataType: "json"});
+  draw();
+}
+
+function applyTheme(t) {
+  if (!t) return;
+  const s = document.documentElement.style;
+  if (t.textColor) s.setProperty("--text", t.textColor);
+  if (t.secondaryBackgroundColor) s.setProperty("--panel", t.secondaryBackgroundColor);
+}
+function fitFrame() {
+  const h = document.body.scrollHeight + 6;
+  if (Math.abs(h - lastH) > 1) { lastH = h; send("streamlit:setFrameHeight", {height: h}); }
+}
+window.addEventListener("message", ev => {
+  if (!ev.data || ev.data.type !== "streamlit:render") return;
+  A = ev.data.args; applyTheme(ev.data.theme);
+  if (A.fen !== lastFen) { sel = null; promo = null; lastFen = A.fen; }   // new position
+  draw();
+});
+new ResizeObserver(fitFrame).observe(document.body);
+send("streamlit:componentReady", {apiVersion: 1});
+</script></body></html>

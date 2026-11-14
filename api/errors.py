@@ -42,3 +42,9 @@ class ModelServiceError(APIError):
     """The model service is unreachable or returned something unusable."""
     status_code = 502
     code = "model_unavailable"
+
+
+class OpsUnavailable(APIError):
+    """A source for the pipeline console (dvc files, MLflow tracker) can't be read."""
+    status_code = 503
+    code = "ops_unavailable"

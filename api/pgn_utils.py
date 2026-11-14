@@ -4,7 +4,7 @@ Everything that can be wrong with user input is caught here and reported as a
 BadPGNError with a message the UI can show to a non-technical user.
 """
 import io
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import List, Optional
 
 import chess
@@ -24,6 +24,7 @@ class ParsedGame:
     black: str
     white_elo: Optional[int]
     black_elo: Optional[int]
+    moves_san: List[str] = field(default_factory=list)   # same order as `moves`
 
     @property
     def plies(self):
@@ -83,7 +84,12 @@ def parse_pgn(text, *, max_bytes, min_plies, max_plies):
         raise BadPGNError(
             f"The game contains an invalid or illegal move: {str(game.errors[0])[:200]}")
 
-    moves = [move.uci() for move in game.mainline_moves()]
+    moves, moves_san = [], []
+    replay = game.board()
+    for move in game.mainline_moves():
+        moves.append(move.uci())
+        moves_san.append(replay.san(move))
+        replay.push(move)
     if len(moves) < min_plies:
         raise BadPGNError(
             f"The game is too short: it has {len(moves)} half-moves and the model "
@@ -107,4 +113,55 @@ def parse_pgn(text, *, max_bytes, min_plies, max_plies):
         black=game.headers.get("Black", "Black"),
         white_elo=_int_or_none(game.headers.get("WhiteElo")),
         black_elo=_int_or_none(game.headers.get("BlackElo")),
+        moves_san=moves_san,
     )
+
+
+def split_games(text, *, max_bytes, max_games, game_max_bytes, min_plies, max_plies):
+    """List the games in an uploaded file so the user can pick one.
+
+    Returns (items, truncated). Each item has the header summary, whether the
+    game is usable for a prediction (same rules as parse_pgn), the reason if
+    not, and the game's own PGN text, ready to send to /predict.
+    """
+    if not isinstance(text, str) or not text.strip():
+        raise BadPGNError("The file is empty.")
+    text = text.lstrip("\ufeff")
+    if len(text.encode("utf-8", "ignore")) > max_bytes:
+        raise BadPGNError(f"The file is too large (the limit is {max_bytes} bytes).")
+
+    stream = io.StringIO(text)
+    exporter = chess.pgn.StringExporter(headers=True, variations=False, comments=False)
+    items, truncated = [], False
+    while True:
+        try:
+            game = chess.pgn.read_game(stream)
+        except Exception:  # noqa: BLE001 - unreadable rest of the file
+            break
+        if game is None:
+            break
+        if len(items) >= max_games:
+            truncated = True
+            break
+        pgn_text = game.accept(exporter)
+        usable, problem, plies = True, None, len(list(game.mainline_moves()))
+        try:
+            parse_pgn(pgn_text, max_bytes=game_max_bytes,
+                      min_plies=min_plies, max_plies=max_plies)
+        except BadPGNError as exc:
+            usable, problem = False, exc.message
+        items.append({
+            "index": len(items) + 1,
+            "white": game.headers.get("White", "?"),
+            "black": game.headers.get("Black", "?"),
+            "white_elo": _int_or_none(game.headers.get("WhiteElo")),
+            "black_elo": _int_or_none(game.headers.get("BlackElo")),
+            "result": game.headers.get("Result", "*"),
+            "plies": plies,
+            "usable": usable,
+            "problem": problem,
+            "pgn": pgn_text,
+        })
+    if not items:
+        raise BadPGNError("No game was found in the file.")
+    return items, truncated

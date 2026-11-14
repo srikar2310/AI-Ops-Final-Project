@@ -41,6 +41,18 @@ class Settings:
     log_level: str = "INFO"
     log_file: Optional[str] = None
     cors_origins: Tuple[str, ...] = ("*",)
+    # --- input helpers ---
+    cp_clip: float = 1500.0             # from params.yaml data.cp_clip (labels use it)
+    max_upload_bytes: int = 5_000_000   # a whole PGN file (many games)
+    max_games_per_file: int = 100
+    # --- pipeline console (read-only ops endpoints) ---
+    project_root: str = "."             # folder holding dvc.yaml, dvc.lock, metrics/
+    mlflow_tracking_url: str = "http://127.0.0.1:5000"
+    ops_timeout_s: float = 5.0
+    ray_url: str = "http://127.0.0.1:8265"
+    mlflow_ui_url: str = ""             # empty = same as mlflow_tracking_url
+    grafana_url: str = "http://127.0.0.1:3000"
+    prometheus_url: str = "http://127.0.0.1:9090"
 
     def __post_init__(self):
         if self.model_mode not in ("rest", "local"):
@@ -74,4 +86,14 @@ class Settings:
             log_level=_env("LOG_LEVEL", "INFO").upper(),
             log_file=_env("LOG_FILE", None),
             cors_origins=tuple(o.strip() for o in origins.split(",") if o.strip()),
+            cp_clip=float(data["cp_clip"]),
+            max_upload_bytes=_env("API_MAX_UPLOAD_BYTES", 5_000_000, int),
+            max_games_per_file=_env("API_MAX_GAMES_PER_FILE", 100, int),
+            project_root=_env("PROJECT_ROOT", "."),
+            mlflow_tracking_url=_env("MLFLOW_TRACKING_URL", "http://127.0.0.1:5000"),
+            ops_timeout_s=_env("OPS_TIMEOUT_S", 5.0, float),
+            ray_url=_env("RAY_URL", "http://127.0.0.1:8265"),
+            mlflow_ui_url=_env("MLFLOW_UI_URL", ""),
+            grafana_url=_env("GRAFANA_URL", "http://127.0.0.1:3000"),
+            prometheus_url=_env("PROMETHEUS_URL", "http://127.0.0.1:9090"),
         )
