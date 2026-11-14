@@ -1,4 +1,4 @@
 [core]
     remote = storage
 ['remote "storage"']
-    url = /home/srikar-j-v/courses/DA3408/Final Project
+    url = /home/srikar-j-v/stockfish/data
