@@ -1,0 +1,5 @@
+outs:
+- md5: 62bf42a62a6b4c4dbf209b2d8a02e093
+  size: 2088960
+  hash: md5
+  path: mlflow.db

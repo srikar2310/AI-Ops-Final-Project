@@ -14,3 +14,5 @@ mlflow.db.bak
 logs/
 build.log
 mlflow.db.pre-docker
+/mlflow.db
+/mlruns
