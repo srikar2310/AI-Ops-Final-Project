@@ -1,3 +1,15 @@
 .venv/
 __pycache__/
 mlruns/
+mlflow.db/
+.pdf/
+statement.txt/logs/
+sample_request.json
+logs/
+sample_request.json
+mlflow.db
+mlruns/
+*.pdf
+dataset/
+files/
+games/

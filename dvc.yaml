@@ -28,3 +28,51 @@ stages:
       metrics:
         - metrics/eval_${item}.json:
             cache: false
+
+  prepare:
+    cmd: python prepare.py
+    deps:
+      - prepare.py
+      - features.py
+      - dataset_clean/train_evaluated
+      - dataset_clean/val_evaluated
+      - dataset_clean/test_evaluated
+    params:
+      - data.max_plies
+      - data.min_plies
+      - data.cp_clip
+    outs:
+      - data/processed
+    metrics:
+      - metrics/prepare.json:
+          cache: false
+
+  train:
+    cmd: python train.py
+    deps:
+      - train.py
+      - model.py
+      - features.py
+      - pyfunc_model.py
+      - data/processed
+    params:
+      - train.seed
+      - train.epochs
+      - train.batch_size
+      - train.lr
+      - train.weight_decay
+      - train.channels
+      - train.kernel
+      - train.dilations
+      - train.dropout
+      - train.hidden
+      - train.use_features
+      - train.feat_hidden
+      - train.exclude_features
+      - train.patience
+    outs:
+      - models/best.pt
+      - models/config.json
+    metrics:
+      - metrics/train.json:
+          cache: false

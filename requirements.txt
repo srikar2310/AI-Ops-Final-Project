@@ -1,0 +1,26 @@
+# ---- Data engineering / Stockfish evaluation (needed now) ----
+chess>=1.10.0            # python-chess: PGN parsing + UCI engine control
+pyyaml>=6.0              # read params.yaml
+numpy>=1.26
+pandas>=2.1
+
+# ---- Versioning / CI (DVC) ----
+dvc>=3.40
+
+# ---- Optional: Ray-based pipeline (if you switch from multiprocessing) ----
+ray>=2.9
+
+# ---- Experiment tracking & model packaging (used at training time) ----
+mlflow>=2.10
+scikit-learn>=1.3
+torch>=2.1             # uncomment once the model is decided
+
+# ---- Serving / monitoring (used later) ----
+fastapi>=0.110
+uvicorn[standard]>=0.27
+prometheus-client>=0.19
+requests>=2.31
+
+# ---- Testing ----
+pytest>=8.0
+pytest-cov>=4.1

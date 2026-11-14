@@ -1,0 +1,16 @@
+name: chess-rating
+
+python_env: python_env.yaml
+
+entry_points:
+  prepare:
+    parameters:
+      workers: {type: int, default: 8}
+    command: "python prepare.py --workers {workers}"
+
+  train:
+    parameters:
+      experiment: {type: string, default: chess-rating-cnn}
+      max_samples: {type: int, default: 0}
+      epochs: {type: int, default: 0}
+    command: "python train.py --experiment {experiment} --max-samples {max_samples} --epochs {epochs}"

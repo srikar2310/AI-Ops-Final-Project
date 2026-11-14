@@ -3,7 +3,7 @@ import os
 import random
 import chess.pgn
 
-input_path = "/home/srikar-j-v/courses/DA3408/Final Project/games/lichess_db_standard_rated_2017-01.pgn"
+input_path = "lichess_db.pgn"
 
 os.makedirs("dataset/train", exist_ok=True)
 os.makedirs("dataset/val", exist_ok=True)

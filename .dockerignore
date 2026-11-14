@@ -1,0 +1,9 @@
+.git
+.dvc/cache
+.venv
+__pycache__
+*.pyc
+dataset_clean
+mlruns
+*.pgn
+*.jsonl
