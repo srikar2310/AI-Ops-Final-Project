@@ -1,3 +1,11 @@
+"""Sample the Lichess dump into rating-balanced train/val/test PGN shards.
+
+Streams lichess_db.pgn and keeps rated, non-bullet games with more than 10 moves.
+Games fill 100-point rating bins (500 to 2500) up to a normal-shaped target
+(mean 1800, sd 220), so the training set is not dominated by ~1500 players.
+Accepted games are split about 5:1:1 into dataset/{train,val,test}/ shards and
+the scan stops once 95% of every split's target is reached.
+"""
 import math
 import os
 import random
@@ -28,6 +36,7 @@ num_bins = len(bin_edges) - 1
 
 
 def get_normal_weight(x):
+  """Normal density at rating x (MU, SIGMA): the share of games a bin should get."""
   return (1 / (SIGMA * math.sqrt(2 * math.pi))) * math.exp(
       -((x - MU) ** 2) / (2 * SIGMA**2)
   )
@@ -52,16 +61,19 @@ SHARD_SIZE_VAL_TEST = 5000
 
 
 def open_train_shard(idx):
+  """Open dataset/train/train_shard_<idx>.pgn for writing."""
   return open(
       f"dataset/train/train_shard_{idx:03d}.pgn", "w", encoding="utf-8"
   )
 
 
 def open_val_shard(idx):
+  """Open dataset/val/val_shard_<idx>.pgn for writing."""
   return open(f"dataset/val/val_shard_{idx:03d}.pgn", "w", encoding="utf-8")
 
 
 def open_test_shard(idx):
+  """Open dataset/test/test_shard_<idx>.pgn for writing."""
   return open(f"dataset/test/test_shard_{idx:03d}.pgn", "w", encoding="utf-8")
 
 

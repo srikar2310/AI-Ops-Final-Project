@@ -1,3 +1,10 @@
+"""Strip the sampled games down to what the pipeline needs.
+
+Reads dataset/{train,val,test}/*.pgn and writes dataset_clean/{split}/ shards
+keeping only the WhiteElo, BlackElo and Result headers and the moves. Clock and
+Lichess engine comments are removed, so every game is evaluated by the same
+local Stockfish in the next (DVC `evaluate`) stage.
+"""
 import os
 import chess.pgn
 
@@ -23,6 +30,7 @@ for split, shard_size in splits:
 
 
   def open_output_shard(idx):
+    """Open dataset_clean/<split>/<split>_shard_<idx>.pgn for writing."""
     return open(
         os.path.join(output_dir, f"{split}_shard_{idx:03d}.pgn"),
         "w",

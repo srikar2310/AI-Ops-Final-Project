@@ -17,6 +17,7 @@ VALID_RESULTS = {"1-0", "0-1", "1/2-1/2"}
 
 @dataclass
 class ParsedGame:
+    """A validated game: main-line moves, result and header information."""
     moves: List[str]               # UCI moves of the main line
     result: str                    # "1-0", "0-1", "1/2-1/2" or "*" (unknown)
     result_inferred: bool          # True if we derived it from the final position
@@ -28,6 +29,7 @@ class ParsedGame:
 
     @property
     def plies(self):
+        """Number of half-moves in the main line."""
         return len(self.moves)
 
 

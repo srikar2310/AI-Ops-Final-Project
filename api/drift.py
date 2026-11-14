@@ -39,6 +39,7 @@ WINDOW_SIZE = Gauge("drift_window_size", "Games currently in the drift window")
 
 
 class DriftMonitor:
+    """Rolling window of recent game features, compared with the training statistics."""
     def __init__(self, stats, clip, window=200, min_samples=30):
         if list(stats["feature_names"]) != list(FEATURE_NAMES):
             raise ValueError("stats.json was made with different features than features.py; "

@@ -36,6 +36,7 @@ def _extract(predictions, expected):
 
 
 class RestModelClient:
+    """Calls the MLflow model server over HTTP (MODEL_MODE=rest)."""
     def __init__(self, url, timeout):
         self.url, self.timeout = url, timeout
         self.session = requests.Session()
@@ -43,6 +44,7 @@ class RestModelClient:
         self._ping = urlunsplit((parts.scheme, parts.netloc, "/ping", "", ""))
 
     def predict(self, records):
+        """Send the records to /invocations; return one rating per record."""
         try:
             resp = self.session.post(
                 self.url, json={"dataframe_records": records}, timeout=self.timeout)
@@ -63,16 +65,19 @@ class RestModelClient:
         return _extract(predictions, len(records))
 
     def ready(self):
+        """True if the model server answers /ping."""
         try:
             return self.session.get(self._ping, timeout=2).status_code == 200
         except requests.RequestException:
             return False
 
     def describe(self):
+        """Mode and target, reported in /predict responses and logs."""
         return {"mode": "rest", "target": self.url}
 
 
 class LocalModelClient:
+    """Loads the registered model inside the API process (MODEL_MODE=local)."""
     def __init__(self, model_uri):
         import mlflow.pyfunc  # imported here so REST mode doesn't need to load mlflow
 
@@ -81,6 +86,7 @@ class LocalModelClient:
         self.model = mlflow.pyfunc.load_model(model_uri)
 
     def predict(self, records):
+        """Run the pyfunc model in-process; return one rating per record."""
         import pandas as pd
 
         try:
@@ -92,13 +98,16 @@ class LocalModelClient:
         return _extract(values, len(records))
 
     def ready(self):
+        """True once the model is loaded."""
         return self.model is not None
 
     def describe(self):
+        """Mode and target, reported in /predict responses and logs."""
         return {"mode": "local", "target": self.uri}
 
 
 def build_model_client(settings):
+    """Return the client chosen by MODEL_MODE."""
     if settings.model_mode == "local":
         return LocalModelClient(settings.model_uri)
     return RestModelClient(settings.mlflow_url, settings.model_timeout_s)

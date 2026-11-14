@@ -16,3 +16,4 @@ build.log
 mlflow.db.pre-docker
 /mlflow.db
 /mlruns
+.patch

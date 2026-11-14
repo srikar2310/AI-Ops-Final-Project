@@ -1,0 +1,1 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="0" skipped="0" tests="1" time="86.011" timestamp="2026-11-14T22:13:38.852119+05:30" hostname="Srikar-Legion-Pro-5-16IRX9"><testcase classname="tests.test_e2e_stack" name="test_e2e11_drift_detected_and_recovers" time="83.949" /></testsuite></testsuites>

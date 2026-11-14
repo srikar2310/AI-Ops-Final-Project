@@ -12,6 +12,7 @@ st.button("Refresh")
 
 
 def fetch(path):
+    """Call an /ops endpoint; show a friendly error and return None if it fails."""
     try:
         return ops(path)
     except ApiError as err:

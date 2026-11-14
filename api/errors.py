@@ -2,6 +2,7 @@
 
 
 class APIError(Exception):
+    """Base class: `status_code` and `code` decide the HTTP answer; `message` is shown to the user."""
     status_code = 500
     code = "internal_error"
 

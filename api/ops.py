@@ -107,6 +107,7 @@ def _summarise(metrics):
 
 
 def build_pipeline(root):
+    """Read dvc.yaml, dvc.lock and metrics/*.json into stages, edges and a Mermaid DAG."""
     root = Path(root).resolve()
     doc = _read_yaml(root / "dvc.yaml")
     if doc is None:
@@ -148,6 +149,7 @@ def build_pipeline(root):
                         edges.append(edge)
 
     def node(name):
+        """Mermaid-safe node id for a stage name."""
         return re.sub(r"\W", "_", name)
 
     lines = ["graph LR"] + [f'  {node(s["name"])}["{s["name"]}"]' for s in stages]
@@ -158,6 +160,7 @@ def build_pipeline(root):
 
 @router.get("/pipeline")
 def pipeline(request: Request):
+    """DVC stages, their dependency edges, last-run time and metrics."""
     return build_pipeline(request.app.state.settings.project_root)
 
 
@@ -183,6 +186,7 @@ def _kv(items, wanted):
 @router.get("/runs")
 def runs(request: Request, limit: int = Query(20, ge=1, le=100),
          experiment: Optional[str] = None):
+    """Recent MLflow runs (newest first) with key metrics, plus counts per status."""
     s = request.app.state.settings
     exps = _mlflow(s, "/api/2.0/mlflow/experiments/search", {"max_results": 100})
     names = {e["experiment_id"]: e["name"] for e in exps.get("experiments", [])
@@ -251,6 +255,7 @@ def service(request: Request):
 
 @router.get("/links")
 def links(request: Request):
+    """Browser addresses of the Ray, MLflow, Grafana and Prometheus UIs."""
     s = request.app.state.settings
     return {"ray": s.ray_url, "mlflow": s.mlflow_ui_url or s.mlflow_tracking_url,
             "grafana": s.grafana_url, "prometheus": s.prometheus_url}

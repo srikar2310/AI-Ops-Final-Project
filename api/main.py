@@ -171,6 +171,7 @@ def create_app(settings=None, engine_pool=None, model_client=None):
     def predict(req: PredictRequest):
         # A plain `def` endpoint runs in a worker thread, so the blocking Stockfish
         # call does not freeze the server.
+        """Analyse one game with Stockfish and estimate the rating of the requested player(s)."""
         rid = request_id_var.get()
         game = parse_pgn(req.pgn, max_bytes=settings.max_pgn_bytes,
                          min_plies=settings.min_plies, max_plies=settings.max_plies)
@@ -265,14 +266,17 @@ def create_app(settings=None, engine_pool=None, model_client=None):
 
     @app.get("/", include_in_schema=False)
     def root():
+        """Send visitors of the bare address to the interactive API docs."""
         return RedirectResponse(url="/docs")
 
     @app.get("/health", tags=["operations"])
     def health():
+        """Liveness: the process is up (Docker healthcheck)."""
         return {"status": "ok"}
 
     @app.get("/ready", tags=["operations"])
     def ready():
+        """Readiness: 200 if an engine and the model service are usable, else 503."""
         engine_ok = bool(app.state.pool and app.state.pool.ready())
         model_ok = bool(app.state.model and app.state.model.ready())
         body = {"status": "ready" if engine_ok and model_ok else "not_ready",
@@ -281,6 +285,7 @@ def create_app(settings=None, engine_pool=None, model_client=None):
 
     @app.get("/metrics", tags=["operations"])
     def prometheus_metrics():
+        """Prometheus scrape endpoint."""
         return Response(generate_latest(), media_type=CONTENT_TYPE_LATEST)
 
     return app

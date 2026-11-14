@@ -8,7 +8,9 @@ request_id_var = contextvars.ContextVar("request_id", default="-")
 
 
 class RequestIdFilter(logging.Filter):
+    """Adds the current request's id to every log record."""
     def filter(self, record):
+        """Attach `request_id` to the record; never drops a record."""
         record.request_id = request_id_var.get()
         return True
 

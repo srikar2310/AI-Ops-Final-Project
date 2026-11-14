@@ -22,6 +22,7 @@ MESSAGES = {
 
 
 class ApiError(Exception):
+    """A failed API call: error code, user message and request id."""
     def __init__(self, code, message=None, request_id=None):
         super().__init__(message or code)
         self.code, self.message, self.request_id = code, message, request_id
@@ -54,23 +55,28 @@ def _request(method, path, timeout=15, **kwargs):
 
 
 def get_config():
+    """GET /config: limits the UI enforces."""
     return _request("GET", "/config")
 
 
 def validate(pgn):
+    """POST /validate: check a PGN without analysing it."""
     return _request("POST", "/validate", json={"pgn": pgn})
 
 
 def split_games(text):
+    """POST /games/split: list the games in an uploaded file."""
     return _request("POST", "/games/split", json={"text": text}, timeout=30)
 
 
 def predict(pgn, player="both"):
+    """POST /predict: analyse a game and estimate ratings (can take a minute)."""
     return _request("POST", "/predict", timeout=PREDICT_TIMEOUT_S,
                     json={"pgn": pgn, "player": player})
 
 
 def ops(path):
+    """GET one of the /ops/* pipeline console endpoints."""
     return _request("GET", path)
 
 

@@ -35,16 +35,19 @@ MARKS = {"inaccuracy": ("?!", "blue"), "mistake": ("?", "orange"), "blunder": ("
 
 @st.cache_data(ttl=60, show_spinner=False)
 def cached_config():
+    """API limits, cached for a minute."""
     return get_config()
 
 
 @st.cache_data(show_spinner=False)
 def cached_validate(pgn):
+    """Validation result per PGN text, cached so reruns don't call the API again."""
     return validate(pgn)
 
 
 @st.cache_data(show_spinner=False)
 def cached_split(text):
+    """Games found in an uploaded file, cached per file content."""
     return split_games(text)
 
 
@@ -99,7 +102,9 @@ def show_check(pgn):
 
 
 def paste_input():
+    """Input mode 1: paste PGN text. Returns a usable PGN or None."""
     def insert_sample():
+        """Fill the text box with the example game."""
         st.session_state.paste_text = SAMPLE
 
     text = st.text_area("Paste one game in PGN format", key="paste_text", height=220)
@@ -113,6 +118,7 @@ def paste_input():
 
 
 def upload_input():
+    """Input mode 2: upload a file and pick one game. Returns a usable PGN or None."""
     file = st.file_uploader("Choose a .pgn or .txt file", type=["pgn", "txt"])
     if file is None:
         return None
@@ -129,6 +135,7 @@ def upload_input():
         st.warning(f"Only the first {found['limit']} games of the file are listed.")
 
     def label(g):
+        """One-line description of a game for the picker."""
         tag = "" if g["usable"] else " — can't be used"
         return (f"#{g['index']}  {g['white']} vs {g['black']}, {g['result']}, "
                 f"{g['plies']} half-moves{tag}")
@@ -143,6 +150,7 @@ def upload_input():
 
 
 def board_input():
+    """Input mode 3: play the moves on a board. Returns a PGN once enough moves are entered."""
     ss = st.session_state
     ss.setdefault("moves", [])
     ss.setdefault("flip", False)
@@ -150,16 +158,19 @@ def board_input():
     ss.setdefault("last_click", None)   # nonce of the last board click we processed
 
     def position():
+        """Board after the moves entered so far."""
         b = chess.Board()
         for u in ss.moves:
             b.push_uci(u)
         return b
 
     def undo():
+        """Take back the last move."""
         if ss.moves:
             ss.moves.pop()
 
     def reset():
+        """Clear all moves."""
         ss.moves, ss.confirm_reset = [], False
 
     board = position()

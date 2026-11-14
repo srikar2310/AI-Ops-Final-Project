@@ -11,13 +11,16 @@ and estimates the rating of each player.
 - **Paste PGN.** Copy the game text from a site such as Lichess or Chess.com and paste it.
   *Insert example game* fills in a sample.
 - **Upload a file.** Choose a `.pgn` or `.txt` file. If it holds several games, pick one.
-- **Play it on a board.** Choose each move from the list, use *Undo* to take one back, and
-  say how the game ended.
+- **Play it on a board.** Click a piece, then the square you want to move it to. *Undo*
+  takes back a move and *Reset* clears the board. Then say how the game ended (player
+  names are optional). At least 10 half-moves are needed.
 
 A green message means the game is fine. A red one tells you what to fix.
 
 ### Step 2: press *Analyse game*
-Analysis takes a few seconds, and up to a minute for long games.
+Choose whose rating to estimate (both players, White only or Black only), then press
+*Analyse game*. Analysis takes a few seconds, and up to a minute for long games. If the
+server is busy, the app tries again by itself.
 
 ### Step 3: read the results
 - **Estimated rating** per player, next to the rating in the file if there was one.
@@ -29,5 +32,6 @@ Analysis takes a few seconds, and up to a minute for long games.
 ### Good to know
 - Very short games and games with an unknown result give less reliable estimates.
 - Only standard chess is supported, one game at a time.
-- A red *service* message in the side bar means the server is down. Try again later.
+- A red message in the side bar ("The server can't be reached") means the server is down.
+  Try again later.
 """)

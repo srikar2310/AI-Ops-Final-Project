@@ -35,6 +35,7 @@ _ENGINE_ERRORS = (chess.engine.EngineError, chess.engine.EngineTerminatedError,
 
 @dataclass
 class Analysis:
+    """Result of analysing one game: per-ply evals, time taken and positions searched."""
     evals: List[int]     # White-perspective centipawns, one per ply (training format)
     seconds: float
     positions: int       # positions actually searched (checkmate/stalemate are not)
@@ -55,6 +56,7 @@ def _popen_stockfish(settings):
 
 
 class EnginePool:
+    """Fixed-size pool of Stockfish engines; one game per engine at a time."""
     def __init__(self, settings, engine_factory=None):
         self.s = settings
         self._factory = engine_factory or (lambda: _popen_stockfish(settings))
@@ -75,6 +77,7 @@ class EnginePool:
                  self.s.pool_size, self.engine_name, self.s.depth, self.s.hash_mb)
 
     def close(self):
+        """Quit every idle engine (called on API shutdown)."""
         while True:
             try:
                 engine = self._q.get_nowait()

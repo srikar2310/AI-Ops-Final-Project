@@ -20,6 +20,7 @@ def _env(name, default, cast=str):
 @dataclass(frozen=True)
 class Settings:
     # --- must match the training data (from params.yaml) ---
+    """All runtime settings; immutable once loaded."""
     engine_path: str
     depth: int
     hash_mb: int
@@ -62,6 +63,7 @@ class Settings:
 
     @classmethod
     def load(cls, params_path=None):
+        """Build settings from params.yaml (engine, data) and environment variables (deployment)."""
         path = params_path or os.environ.get("PARAMS_FILE", "params.yaml")
         with open(path, "r", encoding="utf-8") as f:
             params = yaml.safe_load(f)
