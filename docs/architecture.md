@@ -1,8 +1,5 @@
 # Architecture: Chess Rating Estimator
 
-> Mandatory document 1 of 5: architecture diagram with an explanation of each block.
-> Items marked **[to confirm]** depend on code that has not been reviewed yet (`api/`, `frontend/`, `monitoring/`, `scripts/`). Check them against the code before submitting.
-
 ## 1. What the system does
 
 A user pastes or uploads a chess game in PGN format. The system replays the game with the Stockfish engine to get an evaluation after every move, turns those evaluations into model inputs, and a trained hybrid neural network (1D CNN over the evaluation sequence plus an MLP over 27 game-level features) predicts the Elo rating of each player.

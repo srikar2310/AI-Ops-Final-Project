@@ -1,9 +1,5 @@
 # High-Level Design: Chess Rating Estimator
 
-> Mandatory document 2 of 5: design choices and rationale.
-> Version 1.0 (final draft), 2026-11-14. Items marked **[to confirm]** depend on code not yet reviewed.
-> Architecture diagram and block descriptions: see [architecture.md](architecture.md).
-
 ## 1. Problem statement and goals
 
 **Problem.** Given one chess game, estimate the playing strength (Elo) of each player from the quality of their moves alone.
@@ -75,12 +71,26 @@ The pipeline is a DVC DAG of three stages, `evaluate` (per split), `prepare`, `t
 | Within 200 points | 62.1% |
 | Serving-parity MAE (re-measured through the pyfunc wrapper) | 182.8 |
 
+Error by true rating band (from `reports/model_test_report.json`; bias = mean prediction minus truth). This describes the model; it is not an acceptance criterion.
+
+| Band | Samples | MAE | Bias |
+|---|---|---|---|
+| below 1200 | 1,019 | 398.5 | +398.5 |
+| 1200-1400 | 2,981 | 276.2 | +275.0 |
+| 1400-1600 | 6,790 | 178.5 | +160.8 |
+| 1600-1800 | 10,443 | 120.5 | +50.2 |
+| 1800-2000 | 10,063 | 122.5 | −77.5 |
+| 2000-2200 | 5,716 | 208.9 | −205.4 |
+| 2200 and above | 2,988 | 397.0 | −397.0 |
+
 ## 5. Serving design
 
 | Decision | Rationale |
 |---|---|
 | Model served by `mlflow models serve` from the registry alias `models:/chess-rating@champion` | Meets the "MLflow for APIfication" criterion; promotion and rollback are an alias move, no code change. |
 | Separate FastAPI backend in front of the model server | The model server only knows numbers. PGN parsing, Stockfish, validation, error handling and metrics belong in an application layer the UI can call. |
+| Input helpers `/validate`, `/games/split` and `/config` | The UI can check a game instantly without running Stockfish, let the user pick one game from a multi-game file, and read every limit from the backend instead of hard-coding it. |
+| Every error has a code and a plain-language message | The UI shows the backend's message as is, and the code labels the error metric, so one taxonomy serves users and monitoring. |
 | Stockfish pool inside the backend (2 engines) | Starting an engine per request costs about a second; a pool reuses warm engines and bounds CPU use. |
 | Streamlit frontend talking only to `API_URL` | Required loose coupling; the UI can be redeployed or replaced without touching inference. |
 | docker compose with six services | One command brings up the whole stack identically on any machine; each service has a healthcheck and dependencies wait for health. |
@@ -92,7 +102,8 @@ The pipeline is a DVC DAG of three stages, `evaluate` (per split), `prepare`, `t
 * **Instrumentation.** The backend exports Prometheus metrics: request count by endpoint and status, request latency histogram, errors by type, Stockfish time per game and throughput, idle engines, predicted-rating distribution by side, model-service latency, submitted game length, and drift gauges. Exact metric names are listed in [LLD.md](LLD.md#6-prometheus-metrics).
 * **Dashboard.** A provisioned Grafana dashboard shows all of the above in near real time.
 * **Alerts.** ApiDown, HighErrorRate (5xx ratio above 5%), NoStockfishEngines, SlowPredictions (p95 above 30 s), InputDrift (`feature_drift_max` above 1).
-* **Drift.** The backend keeps a rolling window of the features of recently submitted games (100 games) and compares the window mean of each of the 27 features with the training mean, in units of training standard deviations (`stats.json`). The largest shift is exported as `feature_drift_max`, capped at 3.0. Sustained drift above 1 fires InputDrift, and the retraining pipeline (`scripts/retrain.sh`) **[to confirm trigger mechanism]** re-runs `dvc repro` and `register_model.py`.
+* **Drift.** For every prediction the backend computes the same 27 game-level features the model uses (`features.game_features`) and keeps the last 200 player-samples (about 100 games). Once at least 30 are in the window, it compares the window mean of each feature with the training mean, in training standard deviations (`stats.json`, train split only), and exports each shift (`feature_drift_shift{feature}`), the largest (`feature_drift_max`) and the shift of the mean predicted rating. `feature_drift_max` above 1 for 15 minutes fires InputDrift.
+* **Retraining.** Retraining is started by an operator when InputDrift fires (or on a schedule): `scripts/retrain.sh` runs `dvc repro`, `register_model.py` (test and promote the best run), and `scripts/export_model.py` (champion to `serving/model`, versioned with DVC), then prints the commands to commit, `dvc push` and redeploy the model server. It is deliberately not automatic, so a person reviews the new model before it serves users.
 
 ## 7. Non-functional requirements
 
@@ -116,3 +127,4 @@ These are known and accepted for this release; each is also listed in the test r
 5. **Time control and clock data are ignored.** The model only sees move quality.
 6. **Environment drift.** `requirements-train.txt` has an unpinned `mlflow==`; Python is 3.12 in the compose images but 3.11 in `python_env.yaml` and the root Dockerfile.
 7. **Ops gaps.** The `mlflow` service inherits the model server's healthcheck and reports unhealthy; the SlowPredictions threshold (30 s) is far above real latency (about 1 s).
+

@@ -1,7 +1,5 @@
 # Test Cases: Chess Rating Estimator
 
-> Enlistment of test cases. Automated cases map one-to-one to pytest functions: case `UT-F-03` is `test_uf03_...` in the file named in the section heading. Parametrised cases run once per variant (128 automated executions from 92 cases), plus 12 manual UI cases.
-
 ## Unit: feature engineering (`tests/test_features_unit.py`)
 
 | ID | Description | Expected result |

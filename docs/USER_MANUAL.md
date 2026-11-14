@@ -1,7 +1,5 @@
 # User Manual: Chess Rating Estimator
 
-> Mandatory document 5 of 5: for a non-technical user. Steps 1 to 3 and "Good to know" match the in-app **Help** page (`frontend/pages/2_Help.py`), so the two never disagree. If you change one, change the other.
-
 ## What it does
 
 You give it one chess game. It checks every move with a chess engine and estimates the rating of each player.

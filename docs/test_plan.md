@@ -1,8 +1,5 @@
 # Test Plan: Chess Rating Estimator
 
-> Mandatory document 4 of 5 (with [test_cases.md](test_cases.md) and [test_report.md](test_report.md)).
-> Version 1.0, 2026-11-14.
-
 ## 1. Objectives
 
 1. Show that every component behaves as specified in [LLD.md](LLD.md): feature engineering, PGN parsing, model inputs, the serving wrapper, the REST API and the monitoring stack.
