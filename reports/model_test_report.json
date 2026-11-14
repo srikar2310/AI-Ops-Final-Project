@@ -1,0 +1,66 @@
+{
+  "run_id": "eab43e95b92b45a4bc9bd94f3c3cb900",
+  "model_uri": "runs:/eab43e95b92b45a4bc9bd94f3c3cb900/pyfunc_model",
+  "validation_mae": 185.78839111328125,
+  "logged_test_mae": 182.80364990234375,
+  "retested": {
+    "samples": 40000,
+    "mae": 182.80356242980957,
+    "rmse": 230.40802042352132,
+    "within_100": 0.34,
+    "within_200": 0.6212,
+    "baseline_mae": 232.63408540649414
+  },
+  "bands": [
+    {
+      "band": "0-1200",
+      "samples": 1019,
+      "mae": 398.5092230769673,
+      "bias": 398.5092230769673
+    },
+    {
+      "band": "1200-1400",
+      "samples": 2981,
+      "mae": 276.22331463526814,
+      "bias": 275.0333785524467
+    },
+    {
+      "band": "1400-1600",
+      "samples": 6790,
+      "mae": 178.45297456047496,
+      "bias": 160.7877613635056
+    },
+    {
+      "band": "1600-1800",
+      "samples": 10443,
+      "mae": 120.48116466650433,
+      "bias": 50.16018447941728
+    },
+    {
+      "band": "1800-2000",
+      "samples": 10063,
+      "mae": 122.47822712274002,
+      "bias": -77.48399073871718
+    },
+    {
+      "band": "2000-2200",
+      "samples": 5716,
+      "mae": 208.91172121019943,
+      "bias": -205.41165120556607
+    },
+    {
+      "band": "2200-4000",
+      "samples": 2988,
+      "mae": 396.9617135534325,
+      "bias": -396.9617135534325
+    }
+  ],
+  "checks": {
+    "unknown result gives a finite prediction": true,
+    "invalid side is rejected": true,
+    "empty evals are rejected": true,
+    "prediction is in a sane range (0-4000)": true
+  },
+  "parity_ok": true,
+  "passed": true
+}

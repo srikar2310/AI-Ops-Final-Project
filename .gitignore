@@ -13,3 +13,6 @@ mlruns/
 dataset/
 files/
 games/
+mlflow.db.bak
+sample_request.json
+logs/

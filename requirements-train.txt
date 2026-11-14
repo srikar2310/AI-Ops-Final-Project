@@ -1,6 +1,6 @@
 -r requirements.txt
 torch>=2.1
 ray[default]>=2.9      # [default] includes the dashboard
-mlflow>=2.12           # needed for code_paths and system metrics
+mlflow==           # pinned: version where 'mlflow models serve' works
 psutil>=5.9            # MLflow system metrics (CPU/memory)
 nvidia-ml-py>=12       # MLflow system metrics (GPU)
