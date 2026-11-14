@@ -27,7 +27,7 @@ RUN useradd -m appuser && chown -R appuser /app
 USER appuser
 
 # Log the engine version at build time so it is visible in the build output
-RUN stockfish <<< "quit" | head -n 1 || true
+RUN echo quit | stockfish | head -n 1
 
 # Default: run the evaluation. Override args at `docker run` time.
 ENTRYPOINT ["python", "Stockfish_train_eval.py"]

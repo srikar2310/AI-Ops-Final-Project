@@ -3,7 +3,15 @@
 .venv
 __pycache__
 *.pyc
+games
+dataset
 dataset_clean
+data
+models
 mlruns
+mlflow.db*
+files
+*.pdf
+logs
 *.pgn
 *.jsonl

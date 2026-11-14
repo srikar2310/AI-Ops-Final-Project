@@ -1,0 +1,96 @@
+# docker compose up --build
+#   UI        http://localhost:8501     API docs  http://localhost:8000/docs
+#   MLflow    http://localhost:5000     Prometheus http://localhost:9090
+#   Grafana   http://localhost:3000
+name: chess-rating
+
+x-model-build: &model-build
+  context: .
+  dockerfile: docker/Dockerfile.model
+  args:
+    PYTHON_VERSION: ${PYTHON_VERSION:-3.12}   # must match the version the model was logged with
+
+services:
+  model-server:                     # MLflow pyfunc server for the champion model
+    build: *model-build
+    image: chess-rating-model
+    ports: ["5001:5001"]
+    restart: unless-stopped
+
+  mlflow:                           # experiment tracking UI + REST API (read by the pipeline console)
+    build: *model-build
+    image: chess-rating-model
+    user: "1000:1000"
+    command: ["mlflow", "server", "--host", "0.0.0.0", "--port", "5000",
+              "--backend-store-uri", "sqlite:////mlflow-data/mlflow.db",
+              "--default-artifact-root", "/mlflow-data/mlruns"]
+    environment:
+      MLFLOW_SERVER_ALLOWED_HOSTS: "*"      # newer MLflow rejects unknown Host headers such as "mlflow:5000"
+    volumes:
+      - ./mlflow.db:/mlflow-data/mlflow.db
+      - ./mlruns:/mlflow-data/mlruns
+    ports: ["5000:5000"]
+    restart: unless-stopped
+
+  backend:                          # FastAPI: PGN -> Stockfish -> model -> ratings
+    build: {context: ., dockerfile: docker/Dockerfile.backend}
+    image: chess-rating-backend
+    environment:
+      MODEL_MODE: rest
+      MLFLOW_URL: http://model-server:5001/invocations
+      MLFLOW_TRACKING_URL: http://mlflow:5000
+      PROJECT_ROOT: /app
+      ENGINE_POOL_SIZE: "2"
+      DRIFT_STATS_PATH: /app/data/processed/stats.json
+      # addresses shown as links in the pipeline console: these are opened by the BROWSER
+      MLFLOW_UI_URL: http://localhost:5000
+      GRAFANA_URL: http://localhost:3000
+      PROMETHEUS_URL: http://localhost:9090
+    volumes:                        # read-only: the pipeline console reads these
+      - ./dvc.yaml:/app/dvc.yaml:ro
+      - ./dvc.lock:/app/dvc.lock:ro
+      - ./metrics:/app/metrics:ro
+      - ./data/processed:/app/data/processed:ro
+    depends_on:
+      model-server: {condition: service_healthy}
+    ports: ["8000:8000"]
+    restart: unless-stopped
+
+  frontend:                         # Streamlit; only knows the backend's URL
+    build: {context: ., dockerfile: docker/Dockerfile.frontend}
+    image: chess-rating-frontend
+    environment:
+      API_URL: http://backend:8000
+    depends_on:
+      backend: {condition: service_healthy}
+    ports: ["8501:8501"]
+    restart: unless-stopped
+
+  prometheus:
+    image: prom/prometheus:v2.53.1
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./monitoring/alerts.yml:/etc/prometheus/alerts.yml:ro
+      - prometheus-data:/prometheus
+    depends_on: [backend]
+    ports: ["9090:9090"]
+    restart: unless-stopped
+
+  grafana:
+    image: grafana/grafana:11.2.0
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: admin
+      GF_AUTH_ANONYMOUS_ENABLED: "true"        # so the pipeline console can embed dashboards
+      GF_AUTH_ANONYMOUS_ORG_ROLE: Viewer
+      GF_SECURITY_ALLOW_EMBEDDING: "true"
+    volumes:
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./monitoring/grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - grafana-data:/var/lib/grafana
+    depends_on: [prometheus]
+    ports: ["3000:3000"]
+    restart: unless-stopped
+
+volumes:
+  prometheus-data:
+  grafana-data:

@@ -1,0 +1,7 @@
+# torch is installed separately (CPU wheel) in Dockerfile.model.
+# Pin these to the versions in your training venv (pip freeze) for exact parity.
+mlflow>=2.12
+numpy
+pandas
+cloudpickle
+pyyaml

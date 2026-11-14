@@ -1,0 +1,9 @@
+{
+  "name": "chess-rating",
+  "alias": "champion",
+  "version": 1,
+  "source_run_id": "eab43e95b92b45a4bc9bd94f3c3cb900",
+  "git_commit": "f389325a9060c4ff880098d25d60e27af5f5a70a",
+  "val_mae": "185.78839111328125",
+  "serving_test_mae": "182.804"
+}

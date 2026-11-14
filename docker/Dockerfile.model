@@ -1,0 +1,25 @@
+# MLflow model server (also reused for the MLflow tracking server).
+# The champion model is exported to serving/model by scripts/export_model.py.
+# The pickled model must load under the Python version it was logged with:
+# the export script prints it; pass it as PYTHON_VERSION.
+ARG PYTHON_VERSION=3.12
+FROM python:${PYTHON_VERSION}-slim-bookworm
+
+ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 PIP_NO_CACHE_DIR=1
+
+WORKDIR /srv
+# CPU-only torch keeps the image far smaller than the default CUDA wheel
+RUN pip install torch --index-url https://download.pytorch.org/whl/cpu
+COPY docker/requirements-model.txt .
+RUN pip install -r requirements-model.txt
+
+COPY serving/model /srv/model
+
+RUN useradd -m -u 1000 appuser && mkdir -p /mlflow-data && chown -R appuser /srv /mlflow-data
+USER appuser
+
+EXPOSE 5001
+HEALTHCHECK --interval=15s --timeout=5s --start-period=30s --retries=3 \
+  CMD python -c "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://localhost:5001/ping',timeout=3).status==200 else 1)"
+
+CMD ["mlflow", "models", "serve", "-m", "/srv/model", "-h", "0.0.0.0", "-p", "5001", "--env-manager", "local"]

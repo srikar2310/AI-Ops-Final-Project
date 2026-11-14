@@ -22,11 +22,12 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse, Response
+from fastapi.responses import JSONResponse, RedirectResponse, Response
 from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from . import metrics, ops
+from .drift import DriftMonitor
 from .engine import EnginePool
 from .errors import APIError, BadPGNError
 from .labels import annotate_moves, summarise
@@ -83,6 +84,8 @@ def create_app(settings=None, engine_pool=None, model_client=None):
             app.state.pool.start()          # fails fast if Stockfish can't start
         if app.state.model is None:
             app.state.model = build_model_client(settings)
+        # Input-drift monitor: None (monitoring off) if data/processed/stats.json is unusable
+        app.state.drift = DriftMonitor.from_env(settings.cp_clip)
         log.info("API ready | model: %s", app.state.model.describe())
         try:
             yield
@@ -101,6 +104,7 @@ def create_app(settings=None, engine_pool=None, model_client=None):
     app.state.settings = settings
     app.state.pool = engine_pool
     app.state.model = model_client
+    app.state.drift = None   # set in lifespan; stays None if lifespan does not run (tests)
     app.include_router(ops.router)
 
     # ------------------------------------------------------------ middleware
@@ -185,6 +189,12 @@ def create_app(settings=None, engine_pool=None, model_client=None):
         model_seconds = time.monotonic() - started
         metrics.MODEL_SECONDS.observe(model_seconds)
 
+        # Feed the drift monitor (it swallows and logs its own errors, so it can
+        # never break a prediction).
+        if app.state.drift is not None:
+            for side, rating in zip(sides, ratings):
+                app.state.drift.observe(analysis.evals, side, game.result, rating)
+
         players = []
         for side, rating in zip(sides, ratings):
             metrics.PREDICTED_RATING.labels(side).observe(rating)
@@ -252,6 +262,10 @@ def create_app(settings=None, engine_pool=None, model_client=None):
             max_games_per_file=settings.max_games_per_file,
             short_game_plies=SHORT_GAME_PLIES, engine_depth=settings.depth,
             analysis_timeout_s=settings.analysis_timeout_s)
+
+    @app.get("/", include_in_schema=False)
+    def root():
+        return RedirectResponse(url="/docs")
 
     @app.get("/health", tags=["operations"])
     def health():

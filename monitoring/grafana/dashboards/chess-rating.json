@@ -1,0 +1,651 @@
+{
+    "uid": "chess-rating",
+    "title": "Chess Rating - Service",
+    "schemaVersion": 39,
+    "version": 1,
+    "refresh": "10s",
+    "time": {
+     "from": "now-30m",
+     "to": "now"
+    },
+    "tags": [
+     "chess-rating"
+    ],
+    "panels": [
+     {
+      "type": "stat",
+      "title": "Requests / s",
+      "datasource": {
+       "type": "prometheus",
+       "uid": "prometheus"
+      },
+      "gridPos": {
+       "x": 0,
+       "y": 0,
+       "w": 5,
+       "h": 4
+      },
+      "targets": [
+       {
+        "refId": "A",
+        "expr": "sum(rate(api_requests_total[1m]))",
+        "legendFormat": "",
+        "datasource": {
+         "type": "prometheus",
+         "uid": "prometheus"
+        }
+       }
+      ],
+      "fieldConfig": {
+       "defaults": {
+        "unit": "reqps"
+       },
+       "overrides": []
+      },
+      "id": 1
+     },
+     {
+      "type": "stat",
+      "title": "5xx responses / s",
+      "datasource": {
+       "type": "prometheus",
+       "uid": "prometheus"
+      },
+      "gridPos": {
+       "x": 5,
+       "y": 0,
+       "w": 5,
+       "h": 4
+      },
+      "targets": [
+       {
+        "refId": "A",
+        "expr": "sum(rate(api_requests_total{status=~\"5..\"}[5m])) or vector(0)",
+        "legendFormat": "",
+        "datasource": {
+         "type": "prometheus",
+         "uid": "prometheus"
+        }
+       }
+      ],
+      "fieldConfig": {
+       "defaults": {
+        "unit": "short"
+       },
+       "overrides": []
+      },
+      "id": 2
+     },
+     {
+      "type": "stat",
+      "title": "Predictions (total)",
+      "datasource": {
+       "type": "prometheus",
+       "uid": "prometheus"
+      },
+      "gridPos": {
+       "x": 10,
+       "y": 0,
+       "w": 5,
+       "h": 4
+      },
+      "targets": [
+       {
+        "refId": "A",
+        "expr": "sum(api_request_latency_seconds_count{endpoint=\"/predict\"})",
+        "legendFormat": "",
+        "datasource": {
+         "type": "prometheus",
+         "uid": "prometheus"
+        }
+       }
+      ],
+      "fieldConfig": {
+       "defaults": {
+        "unit": "short"
+       },
+       "overrides": []
+      },
+      "id": 3
+     },
+     {
+      "type": "stat",
+      "title": "Idle Stockfish engines",
+      "datasource": {
+       "type": "prometheus",
+       "uid": "prometheus"
+      },
+      "gridPos": {
+       "x": 15,
+       "y": 0,
+       "w": 5,
+       "h": 4
+      },
+      "targets": [
+       {
+        "refId": "A",
+        "expr": "stockfish_engines_available",
+        "legendFormat": "",
+        "datasource": {
+         "type": "prometheus",
+         "uid": "prometheus"
+        }
+       }
+      ],
+      "fieldConfig": {
+       "defaults": {
+        "unit": "short"
+       },
+       "overrides": []
+      },
+      "id": 4
+     },
+     {
+      "type": "stat",
+      "title": "Input drift (max shift, std)",
+      "datasource": {
+       "type": "prometheus",
+       "uid": "prometheus"
+      },
+      "gridPos": {
+       "x": 20,
+       "y": 0,
+       "w": 4,
+       "h": 4
+      },
+      "targets": [
+       {
+        "refId": "A",
+        "expr": "feature_drift_max",
+        "legendFormat": "",
+        "datasource": {
+         "type": "prometheus",
+         "uid": "prometheus"
+        }
+       }
+      ],
+      "fieldConfig": {
+       "defaults": {
+        "unit": "short"
+       },
+       "overrides": []
+      },
+      "id": 5
+     },
+     {
+      "type": "timeseries",
+      "title": "Requests / s by endpoint",
+      "datasource": {
+       "type": "prometheus",
+       "uid": "prometheus"
+      },
+      "gridPos": {
+       "x": 0,
+       "y": 4,
+       "w": 8,
+       "h": 8
+      },
+      "targets": [
+       {
+        "refId": "A",
+        "expr": "sum by (endpoint) (rate(api_requests_total[1m]))",
+        "legendFormat": "{{endpoint}}",
+        "datasource": {
+         "type": "prometheus",
+         "uid": "prometheus"
+        }
+       }
+      ],
+      "fieldConfig": {
+       "defaults": {
+        "unit": "reqps"
+       },
+       "overrides": []
+      },
+      "id": 6
+     },
+     {
+      "type": "timeseries",
+      "title": "/predict latency",
+      "datasource": {
+       "type": "prometheus",
+       "uid": "prometheus"
+      },
+      "gridPos": {
+       "x": 8,
+       "y": 4,
+       "w": 8,
+       "h": 8
+      },
+      "targets": [
+       {
+        "refId": "A",
+        "expr": "histogram_quantile(0.5, sum by (le) (rate(api_request_latency_seconds_bucket{endpoint=\"/predict\"}[5m])))",
+        "legendFormat": "p50",
+        "datasource": {
+         "type": "prometheus",
+         "uid": "prometheus"
+        }
+       },
+       {
+        "refId": "B",
+        "expr": "histogram_quantile(0.95, sum by (le) (rate(api_request_latency_seconds_bucket{endpoint=\"/predict\"}[5m])))",
+        "legendFormat": "p95",
+        "datasource": {
+         "type": "prometheus",
+         "uid": "prometheus"
+        }
+       }
+      ],
+      "fieldConfig": {
+       "defaults": {
+        "unit": "s"
+       },
+       "overrides": []
+      },
+      "id": 7
+     },
+     {
+      "type": "timeseries",
+      "title": "Errors by type / s",
+      "datasource": {
+       "type": "prometheus",
+       "uid": "prometheus"
+      },
+      "gridPos": {
+       "x": 16,
+       "y": 4,
+       "w": 8,
+       "h": 8
+      },
+      "targets": [
+       {
+        "refId": "A",
+        "expr": "sum by (error_type) (rate(api_errors_total[5m]))",
+        "legendFormat": "{{error_type}}",
+        "datasource": {
+         "type": "prometheus",
+         "uid": "prometheus"
+        }
+       }
+      ],
+      "fieldConfig": {
+       "defaults": {
+        "unit": "short"
+       },
+       "overrides": []
+      },
+      "id": 8
+     },
+     {
+      "type": "timeseries",
+      "title": "Stockfish time per game",
+      "datasource": {
+       "type": "prometheus",
+       "uid": "prometheus"
+      },
+      "gridPos": {
+       "x": 0,
+       "y": 12,
+       "w": 8,
+       "h": 8
+      },
+      "targets": [
+       {
+        "refId": "A",
+        "expr": "histogram_quantile(0.5, sum by (le) (rate(stockfish_analysis_seconds_bucket[5m])))",
+        "legendFormat": "p50",
+        "datasource": {
+         "type": "prometheus",
+         "uid": "prometheus"
+        }
+       },
+       {
+        "refId": "B",
+        "expr": "histogram_quantile(0.95, sum by (le) (rate(stockfish_analysis_seconds_bucket[5m])))",
+        "legendFormat": "p95",
+        "datasource": {
+         "type": "prometheus",
+         "uid": "prometheus"
+        }
+       }
+      ],
+      "fieldConfig": {
+       "defaults": {
+        "unit": "s"
+       },
+       "overrides": []
+      },
+      "id": 9
+     },
+     {
+      "type": "timeseries",
+      "title": "Stockfish throughput",
+      "datasource": {
+       "type": "prometheus",
+       "uid": "prometheus"
+      },
+      "gridPos": {
+       "x": 8,
+       "y": 12,
+       "w": 8,
+       "h": 8
+      },
+      "targets": [
+       {
+        "refId": "A",
+        "expr": "rate(stockfish_positions_total[1m])",
+        "legendFormat": "positions / s",
+        "datasource": {
+         "type": "prometheus",
+         "uid": "prometheus"
+        }
+       },
+       {
+        "refId": "B",
+        "expr": "histogram_quantile(0.95, sum by (le) (rate(stockfish_position_seconds_bucket[5m])))",
+        "legendFormat": "p95 s / position",
+        "datasource": {
+         "type": "prometheus",
+         "uid": "prometheus"
+        }
+       }
+      ],
+      "fieldConfig": {
+       "defaults": {
+        "unit": "short"
+       },
+       "overrides": []
+      },
+      "id": 10
+     },
+     {
+      "type": "timeseries",
+      "title": "Engine health",
+      "datasource": {
+       "type": "prometheus",
+       "uid": "prometheus"
+      },
+      "gridPos": {
+       "x": 16,
+       "y": 12,
+       "w": 8,
+       "h": 8
+      },
+      "targets": [
+       {
+        "refId": "A",
+        "expr": "stockfish_engines_available",
+        "legendFormat": "idle engines",
+        "datasource": {
+         "type": "prometheus",
+         "uid": "prometheus"
+        }
+       },
+       {
+        "refId": "B",
+        "expr": "increase(stockfish_engine_failures_total[5m])",
+        "legendFormat": "failures (5m)",
+        "datasource": {
+         "type": "prometheus",
+         "uid": "prometheus"
+        }
+       },
+       {
+        "refId": "C",
+        "expr": "increase(stockfish_engine_restarts_total[5m])",
+        "legendFormat": "restarts (5m)",
+        "datasource": {
+         "type": "prometheus",
+         "uid": "prometheus"
+        }
+       }
+      ],
+      "fieldConfig": {
+       "defaults": {
+        "unit": "short"
+       },
+       "overrides": []
+      },
+      "id": 11
+     },
+     {
+      "type": "timeseries",
+      "title": "Predicted rating by side",
+      "datasource": {
+       "type": "prometheus",
+       "uid": "prometheus"
+      },
+      "gridPos": {
+       "x": 0,
+       "y": 20,
+       "w": 8,
+       "h": 8
+      },
+      "targets": [
+       {
+        "refId": "A",
+        "expr": "histogram_quantile(0.5, sum by (le, side) (rate(predicted_rating_bucket[5m])))",
+        "legendFormat": "median {{side}}",
+        "datasource": {
+         "type": "prometheus",
+         "uid": "prometheus"
+        }
+       },
+       {
+        "refId": "B",
+        "expr": "histogram_quantile(0.9, sum by (le, side) (rate(predicted_rating_bucket[5m])))",
+        "legendFormat": "p90 {{side}}",
+        "datasource": {
+         "type": "prometheus",
+         "uid": "prometheus"
+        }
+       }
+      ],
+      "fieldConfig": {
+       "defaults": {
+        "unit": "short"
+       },
+       "overrides": []
+      },
+      "id": 12
+     },
+     {
+      "type": "timeseries",
+      "title": "Model service latency",
+      "datasource": {
+       "type": "prometheus",
+       "uid": "prometheus"
+      },
+      "gridPos": {
+       "x": 8,
+       "y": 20,
+       "w": 8,
+       "h": 8
+      },
+      "targets": [
+       {
+        "refId": "A",
+        "expr": "histogram_quantile(0.5, sum by (le) (rate(model_request_seconds_bucket[5m])))",
+        "legendFormat": "p50",
+        "datasource": {
+         "type": "prometheus",
+         "uid": "prometheus"
+        }
+       },
+       {
+        "refId": "B",
+        "expr": "histogram_quantile(0.95, sum by (le) (rate(model_request_seconds_bucket[5m])))",
+        "legendFormat": "p95",
+        "datasource": {
+         "type": "prometheus",
+         "uid": "prometheus"
+        }
+       },
+       {
+        "refId": "C",
+        "expr": "api_requests_in_progress",
+        "legendFormat": "requests in progress",
+        "datasource": {
+         "type": "prometheus",
+         "uid": "prometheus"
+        }
+       }
+      ],
+      "fieldConfig": {
+       "defaults": {
+        "unit": "s"
+       },
+       "overrides": []
+      },
+      "id": 13
+     },
+     {
+      "type": "timeseries",
+      "title": "Submitted game length (plies)",
+      "datasource": {
+       "type": "prometheus",
+       "uid": "prometheus"
+      },
+      "gridPos": {
+       "x": 16,
+       "y": 20,
+       "w": 8,
+       "h": 8
+      },
+      "targets": [
+       {
+        "refId": "A",
+        "expr": "histogram_quantile(0.5, sum by (le) (rate(pgn_plies_bucket[5m])))",
+        "legendFormat": "median",
+        "datasource": {
+         "type": "prometheus",
+         "uid": "prometheus"
+        }
+       },
+       {
+        "refId": "B",
+        "expr": "histogram_quantile(0.9, sum by (le) (rate(pgn_plies_bucket[5m])))",
+        "legendFormat": "p90",
+        "datasource": {
+         "type": "prometheus",
+         "uid": "prometheus"
+        }
+       }
+      ],
+      "fieldConfig": {
+       "defaults": {
+        "unit": "short"
+       },
+       "overrides": []
+      },
+      "id": 14
+     },
+     {
+      "type": "bargauge",
+      "title": "Feature drift: largest shifts (training stds)",
+      "datasource": {
+       "type": "prometheus",
+       "uid": "prometheus"
+      },
+      "gridPos": {
+       "x": 0,
+       "y": 28,
+       "w": 12,
+       "h": 9
+      },
+      "targets": [
+       {
+        "refId": "A",
+        "expr": "topk(10, abs(feature_drift_shift))",
+        "legendFormat": "{{feature}}",
+        "instant": true,
+        "datasource": {
+         "type": "prometheus",
+         "uid": "prometheus"
+        }
+       }
+      ],
+      "fieldConfig": {
+       "defaults": {
+        "unit": "short",
+        "min": 0,
+        "max": 2,
+        "thresholds": {
+         "mode": "absolute",
+         "steps": [
+          {
+           "color": "green",
+           "value": null
+          },
+          {
+           "color": "orange",
+           "value": 0.5
+          },
+          {
+           "color": "red",
+           "value": 1
+          }
+         ]
+        }
+       },
+       "overrides": []
+      },
+      "options": {
+       "orientation": "horizontal",
+       "displayMode": "gradient"
+      },
+      "id": 15
+     },
+     {
+      "type": "timeseries",
+      "title": "Drift over time",
+      "datasource": {
+       "type": "prometheus",
+       "uid": "prometheus"
+      },
+      "gridPos": {
+       "x": 12,
+       "y": 28,
+       "w": 12,
+       "h": 9
+      },
+      "targets": [
+       {
+        "refId": "A",
+        "expr": "feature_drift_max",
+        "legendFormat": "max feature shift",
+        "datasource": {
+         "type": "prometheus",
+         "uid": "prometheus"
+        }
+       },
+       {
+        "refId": "B",
+        "expr": "abs(predicted_rating_shift)",
+        "legendFormat": "predicted rating shift",
+        "datasource": {
+         "type": "prometheus",
+         "uid": "prometheus"
+        }
+       },
+       {
+        "refId": "C",
+        "expr": "drift_window_size / 100",
+        "legendFormat": "window fill (x100 games)",
+        "datasource": {
+         "type": "prometheus",
+         "uid": "prometheus"
+        }
+       }
+      ],
+      "fieldConfig": {
+       "defaults": {
+        "unit": "short"
+       },
+       "overrides": []
+      },
+      "id": 16
+     }
+    ]
+   }
