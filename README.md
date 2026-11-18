@@ -172,3 +172,6 @@ I used an AI assistant (Claude, by Anthropic) while building this project.
 * wrote the Phase 7 test suites (`tests/test_features_unit.py`, `test_pgn_parsing.py`, `test_model_unit.py`, `test_pyfunc_unit.py`, `test_data_and_acceptance.py`, `test_api_live.py`, `test_e2e_stack.py`, `phase7_helpers.py`), the root `conftest.py` and `scripts/test_report.py`;
 * drafted the documents in `docs/` (architecture, HLD, LLD, test plan, test cases, test report, user manual) and this README, from the project's code and records; the test results in the report come from my own runs;
 * added docstrings to the code without changing its behaviour.
+
+## Video
+https://drive.google.com/file/d/19z6tsjOdJ5Rz7SXRvTqc6TXYvfM6Gtmn/view?usp=sharing
